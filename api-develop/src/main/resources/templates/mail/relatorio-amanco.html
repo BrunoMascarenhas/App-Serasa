@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório de Vendas</title>
+    <style>
+
+        body {
+            font-family: Verdana, Arial, sans-serif;
+            font-size: 14px;
+            margin: 0 0;
+            padding: 0 0;
+            background-color: snow;
+        }
+
+        .content {
+            width: 960px;
+            margin: 0 auto;
+            text-align: center;
+
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 10px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: auto;
+            margin: 20px auto;
+        }
+
+        table, th, td {
+            border: 1px solid #cccccc;
+            padding: 5px;
+        }
+
+        thead {
+            background-color: lightblue;
+        }
+    </style>
+</head>
+
+<body>
+<div class="content">
+    <h2 th:text="${'Período de: ' + #temporals.format(startDate, 'dd/MM/yyyy') + ' à ' + #temporals.format(endDate, 'dd/MM/yyyy')}"></h2>
+
+    <table>
+        <thead>
+        <tr>
+            <th>Código</th>
+            <th>Fornecedor</th>
+            <th>Clientes Positivados</th>
+            <th>Valor Vendido</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr th:each="venda: ${vendas}">
+            <td th:text="${venda.codFornecedor}"></td>
+            <td th:text="${venda.fornecedor}"></td>
+            <td th:text="${venda.qtCliPos}"></td>
+            <td th:text="${#numbers.formatDecimal(venda.vltotal, 0, 'POINT', 2, 'COMMA')}"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p>Atenciosamente <br>Mercante Distribuidora</p>
+
+    <p class="footer">Este é um email enviado automaticamente por favor não responder.</p>
+</div>
+</body>
+</html>

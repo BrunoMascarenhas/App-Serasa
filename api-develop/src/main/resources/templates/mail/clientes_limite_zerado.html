@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório de Clientes com Limite Zerado</title>
+    <style>
+
+        body {
+            font-family: Verdana, Arial, sans-serif;
+            font-size: 14px;
+            margin: 0 0;
+            padding: 0 0;
+            background-color: snow;
+        }
+
+        .content {
+            width: 960px;
+            margin: 0 auto;
+            text-align: center;
+
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 10px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: auto;
+            margin: 20px auto;
+        }
+
+        table, th, td {
+            border: 1px solid #cccccc;
+            padding: 5px;
+        }
+
+        thead {
+            background-color: lightblue;
+        }
+    </style>
+</head>
+
+<body>
+<div class="content">
+    <h2 th:text="${'Relatório de clientes com limite zerado - ' + #temporals.format(date, 'dd/MM/yyyy')}"></h2>
+
+    <h3 th:if="${#lists.isEmpty(relatorios)}">Nenhum cliente com limite zerado</h3>
+
+    <table th:if="${not #lists.isEmpty(relatorios)}">
+        <thead>
+        <tr>
+            <th>Código</th>
+            <th>Cliente</th>
+            <th>Quantidade</th>
+            <th>Valor Total</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr th:each="relatorio: ${relatorios}">
+            <td th:text="${relatorio.codigo}"></td>
+            <td th:text="${relatorio.nome}"></td>
+            <td th:text="${relatorio.quantidade}"></td>
+            <td th:text="${relatorio.valor}"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p>Atenciosamente <br>MR Distribuidora</p>
+
+    <p class="footer">Este é um email enviado automaticamente por favor não responder.</p>
+</div>
+</body>
+</html>

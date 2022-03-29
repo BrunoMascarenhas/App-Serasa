@@ -1,0 +1,96 @@
+package br.com.mercante.api.service
+
+import br.com.mercante.api.model.NotaFiscal
+import br.com.mercante.api.repository.ItemPreEntradaRepository
+import br.com.mercante.api.repository.PedidoCompraRepository
+import br.com.mercante.api.repository.PreEntradaRepository
+import br.com.mercante.api.repository.XmlNFeRepository
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
+@Service
+class PreEntradaService(private val xmlNFeRepository: XmlNFeRepository,
+                        private val preEntradaRepository: PreEntradaRepository,
+                        private val pedidoCompraRepository: PedidoCompraRepository,
+                        private val itemPreEntradaRepository: ItemPreEntradaRepository) {
+
+    //TODO: existem xmls que ainda não tem número do pedido de compra no item.
+
+    fun vincular() {
+
+        val numtransaction: Long = 252889
+
+        val preEntrada = preEntradaRepository.findById(numtransaction)
+                .orElseThrow { RuntimeException("Não existe pre-entrada com esse número de transação") }
+
+        if (preEntrada.numNota == null) {
+            throw RuntimeException("Não existe número da nota vinculado a pre-entrada")
+        }
+
+        val xml = xmlNFeRepository.findByCnpjAndNumeroNotaAndSerie(preEntrada.fornecedor.cnpj, preEntrada.numNota, preEntrada.serie)
+
+        if (xml.isEmpty) {
+            throw RuntimeException("Não existe xml baixado para essa nota.")
+        }
+
+        val xmlMapper = XmlMapper()
+        xmlMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+
+        //Add module JavaTimeModule to parse date and time to LocalDateTime class
+        val javaTimeModule = JavaTimeModule()
+        javaTimeModule.addDeserializer(LocalDateTime::class.java, LocalDateTimeDeserializer(DateTimeFormatter.ISO_DATE_TIME))
+        xmlMapper.registerModule(javaTimeModule)
+
+        val nfeXML = xmlMapper.readValue(xml.get().dadosXml, NotaFiscal::class.java)
+
+        val itens = nfeXML.nfe.informacoesNfe.det.map { item -> item.produto }
+
+        for (produto in itens) {
+
+            if (produto.numeroPedido != null) {
+                val pedidoCompra = pedidoCompraRepository.findById(produto.numeroPedido)
+
+                if (pedidoCompra.isPresent) {
+                    val pedido = pedidoCompra.get()
+
+                    for (itemPedido in pedido.items) {
+                        if (itemPedido.getProduto().codigoFabrica == produto.codigo) {
+                            val itemPreEntrada = preEntrada.itemsPreEntrada.find { itemPreEntrada ->
+                                itemPreEntrada.produto.codigo == itemPedido.getProduto().codigo
+                            }
+
+                            if (itemPreEntrada != null) {
+                                this.itemPreEntradaRepository.setNumPedido(pedidoCompra.get().numeroPedido,
+                                        itemPedido.itemPedidoCompraId.numeroSequencia, itemPreEntrada.numeroTransacao)
+                            } else {
+                                throw RuntimeException("ItemPreEntrada nao encontrado")
+                            }
+                        }
+
+                        //registrar ignorados
+                    }
+
+                } else {
+                    throw RuntimeException("Não foi encontrado o pedido de compra ${produto.numeroPedido}")
+                }
+
+            } else {
+                throw RuntimeException("Não existe numero do pedido para o item")
+            }
+        }
+
+        //validar se existe pedido de compra e se existe o item dentro dessedido
+
+        //caso sucesso, coloca o numero do pedido na pcmovpreent
+    }
+
+    companion object {
+        internal val log = LoggerFactory.getLogger(this::class.java)
+    }
+}

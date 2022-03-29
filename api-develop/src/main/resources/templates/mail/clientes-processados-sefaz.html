@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório de clientes processado SEFAZ</title>
+    <style>
+
+        body {
+            font-family: Verdana, Arial, sans-serif;
+            font-size: 12px;
+            margin: 0 0;
+            padding: 0 0;
+            background-color: snow;
+        }
+
+        .content {
+            width: 960px;
+            margin: 0 auto;
+            text-align: center;
+
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 10px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: auto;
+            margin: 20px auto;
+        }
+
+        table, th, td {
+            border: 1px solid #cccccc;
+            padding: 5px;
+        }
+
+        thead {
+            background-color: lightblue;
+        }
+    </style>
+</head>
+
+<body>
+<div class="content">
+    <h2 th:text="${'Relatório de clientes processado SEFAZ - ' + #temporals.format(date, 'dd/MM/yyyy')}"></h2>
+
+    <h3 th:if="${#lists.isEmpty(bloqueados) && #lists.isEmpty(desbloqueados)}">Nenhum cliente processado</h3>
+
+    <table th:if="${not #lists.isEmpty(bloqueados) || not #lists.isEmpty(desbloqueados)}">
+        <thead>
+        <tr>
+            <th>Código</th>
+            <th>Cliente</th>
+            <th>CGC</th>
+            <th>Inscrição</th>
+            <th>Ação</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr th:each="cliente : ${desbloqueados}">
+            <td th:text="${cliente.codigo}"></td>
+            <td th:text="${cliente.nome}"></td>
+            <td th:text="${cliente.cgc}"></td>
+            <td th:text="${cliente.inscricao}"></td>
+            <td>Desbloqueado</td>
+        </tr>
+        <tr th:each="cliente : ${bloqueados}">
+            <td th:text="${cliente.codigo}"></td>
+            <td th:text="${cliente.nome}"></td>
+            <td th:text="${cliente.cgc}"></td>
+            <td th:text="${cliente.inscricao}"></td>
+            <td>Bloqueado</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <p>Atenciosamente <br>Mercante Distribuidora</p>
+
+    <p class="footer">Este é um email enviado automaticamente por favor não responder.</p>
+</div>
+</body>
+</html>

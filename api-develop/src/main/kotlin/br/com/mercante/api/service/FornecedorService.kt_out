@@ -1,0 +1,81 @@
+package br.com.mercante.api.service
+
+import br.com.mercante.api.mail.MailService
+import br.com.mercante.api.repository.FornecedorRepository
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Service
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.*
+
+@Service
+class FornecedorService(private val fornecedorRepository: FornecedorRepository,
+                        private val mailService: MailService) {
+
+    /**
+     * Gera os relatórios da amanco e envia para o email cadastrado
+     * */
+    fun gerarRelatorio(tipo: Char) {
+
+        val dataInicio: LocalDate
+        val dataFim: LocalDate
+        val assuntoEmail: String
+        val hoje = LocalDate.now()
+
+        when (tipo) {
+            /**
+             * O relatório mensal terá como base o mes anterior ao mes o qual foi gerado
+             * */
+            'M' -> {
+                val mesReferencia = hoje.minusMonths(1)
+                val nomeMes = mesReferencia.month
+                        .getDisplayName(TextStyle.FULL, Locale("pt", "BR"))
+                        .capitalize()
+                dataInicio = mesReferencia.withDayOfMonth(1)
+                dataFim = mesReferencia.withDayOfMonth(mesReferencia.lengthOfMonth())
+                assuntoEmail = "Relatório do Mês de $nomeMes"
+            }
+            /**
+             * O Relatório semanal terá como base o primeiro dia do mes corrente, com o dia da ultima sexta feira
+             * anterior a data atual #startDate
+             * Caso a ultima sexta feira seja um dia do mes anterior, o relatório não é gerado.
+             * */
+            'S' -> {
+                dataInicio = LocalDate.now().withDayOfMonth(1)
+                dataFim = hoje.minusWeeks(1).with(DayOfWeek.FRIDAY)
+
+                if (dataFim.month != hoje.month) {
+                    log.debug("A ultima sexta feira ($dataFim) pertence a um mês diferente do mês atual.")
+                    return
+                }
+
+                assuntoEmail = "Relatório Semanal"
+            }
+            /**
+             * Caso nenhuma das opções forem selecioadas o relatório não será enviado
+             * */
+            else -> {
+                log.debug("O tipo do relatório desejado não foi encontrado: $tipo")
+                return
+            }
+        }
+
+        log.debug("Gerando relatório de vendas tipo: $tipo, dataInicial: $dataInicio e dataFinal: $dataFim")
+        val vendas = this.fornecedorRepository.vendasPorFornecedorAmanco(dataInicio, dataFim)
+
+        val template = "mail/relatorio-amanco.html"
+        val params = HashMap<String, Any>()
+        params["startDate"] = dataInicio
+        params["endDate"] = dataFim
+        params["vendas"] = vendas
+
+        val para = arrayOf("luiz.roberto.silva@mexichem.com")
+
+        this.mailService.sendMailWithTemplate(para, assuntoEmail, template, params)
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(this::class.java)
+    }
+}
